@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:error-handler-plugin="http://www.mulesoft.org/schema/mule/error-handler-plugin" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/error-handler-plugin http://www.mulesoft.org/schema/mule/error-handler-plugin/current/mule-error-handler-plugin.xsd">
+	<http:request-config name="HTTP_Request_configuration2" doc:name="HTTP Request configuration" doc:id="14e4c76a-028b-496d-9d11-d2cb8f7f69af" >
+		<http:request-connection host="localhost" port="8081" />
+	</http:request-config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="35fc2c24-62aa-43a3-b241-054ab46f71ab" >
+		<http:request-connection host="localhost" port="8080" />
+	</http:request-config>
+	<flow name="Process-API" doc:id="4bbb0759-112b-408c-8e96-757e8134b786" >
+		<http:listener doc:name="Listener" doc:id="a537cda1-e8ec-471d-a611-acf16b2d19ab" config-ref="HTTP_Listener_config2" path="/process">
+			<http:error-response >
+				<http:body ><![CDATA[#[payload]]]></http:body>
+			</http:error-response>
+		</http:listener>
+		<http:request method="GET" doc:name="Request" doc:id="563f1737-d763-470b-85dc-ca410bf26343" config-ref="HTTP_Request_configuration2" path="/raise">
+			<error-mapping targetType="T24:ERROR" />
+			<http:response-validator >
+				<http:success-status-code-validator values="200" />
+			</http:response-validator>
+		</http:request>
+		<logger level="INFO" doc:name="Logger" doc:id="376589a4-3e09-45a6-9426-b4f1de08c00e" />
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="ded54a5c-9880-4e04-94c8-d85879ff3b91" type="ANY">
+				<error-handler-plugin:on-error doc:name="Process Error" doc:id="23f4d133-37ae-45f8-9fdb-721a4755e41f" apiName="Process API" apiVersion="2.0.0" errorTypes="T24:ERROR" errorCodes="500" errorMessages="T24 error caught in process but came from system layer" previousErrors="#[error.errorMessage.payload default payload]"/>
+				<logger level="INFO" doc:name="Logger" doc:id="4605385b-6814-480a-a668-ccd5886b335b" message="#[payload]"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="process-Spring" doc:id="a3010490-52b5-4979-9495-e415d0837949" >
+		<http:listener doc:name="Listener" doc:id="5c1599c7-bf56-465e-8e49-f26219fa43e6" config-ref="HTTP_Listener_config2" path="/spring/{id}">
+			<http:error-response >
+				<http:body ><![CDATA[#[payload]]]></http:body>
+			</http:error-response>
+		</http:listener>
+		<http:request method="GET" doc:name="Request" doc:id="25c50f16-77bd-48d5-9d83-4dc65669fada" config-ref="HTTP_Request_configuration" path="/product/{id}">
+			<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	id :  attributes.uriParams.'id'
+}]]]></http:uri-params>
+			<http:response-validator >
+				<http:success-status-code-validator values="200..500" />
+			</http:response-validator>
+		</http:request>
+		<raise-error doc:name="Raise error" doc:id="71a29af1-e8f9-4f65-b95a-6bc0d8d02d28" type="SPRING:MISSINGPRODUCT"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="e8b30dcb-6f3c-4bad-a8de-c0497b70654c" type="ANY">
+				<error-handler-plugin:on-error doc:name="Process Error" doc:id="627a7579-f781-4f61-9afa-343e4df5280d" errorTypes="SPRING:MISSINGPRODUCT" errorCodes="#[payload.code]" errorMessages="#[payload.message]" apiName="Process API" apiVersion="3.0.0" details="#[payload.details]" previousErrors="#[error.errorMessage.payload default payload]"/>
+				<logger level="INFO" doc:name="Logger" doc:id="60dd8de5-c6fd-4427-9533-170d28039aca" message="#[payload]"/>
+				<ee:transform doc:name="Transform Message" doc:id="11d0783d-f950-47a8-8d5f-3a48edc5c797" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.errorDetails]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>

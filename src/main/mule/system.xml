@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:error-handler-plugin="http://www.mulesoft.org/schema/mule/error-handler-plugin" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/error-handler-plugin http://www.mulesoft.org/schema/mule/error-handler-plugin/current/mule-error-handler-plugin.xsd">
+	<flow name="System-Api" doc:id="478c2937-5596-41d4-bef2-72527b2832d7" >
+		<http:listener doc:name="Listener" doc:id="fe7d7751-8f72-46ff-a72a-daaaae505e40" config-ref="HTTP_Listener_config2" path="/raise">
+			<http:error-response statusCode="500">
+				<http:body ><![CDATA[#[payload]]]></http:body>
+			</http:error-response>
+		</http:listener>
+		<raise-error doc:name="Raise error" doc:id="3f4decb7-1da4-45ab-a4b5-4e36630f82bb" type="T24:ERROR" description="Raising T24 error"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="bc0cd86a-9521-4371-9db9-bb48b26fa5a3" type="T24:ERROR">
+				<error-handler-plugin:on-error doc:name="Process Error" doc:id="9920ffe3-cc49-42f1-92c1-1a2027037cb5" errorTypes="T24:ERROR" errorCodes="T24_001" errorMessages="T24 error from system layer" apiName="System API" apiVersion="1.0.0" resourcePath="/raise" previousErrors="#[error.errorMessage.payload default payload]"/>
+				<logger level="INFO" doc:name="Logger" doc:id="0033c845-1cd5-4ab2-b7b6-e568aebd9515" message="#[payload]"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>
